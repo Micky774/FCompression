@@ -50,7 +50,6 @@ public class IFSDecoder {
 			for (int s = 0; s < WIDTH / rangeBlockSize; s++) {
 				functionList[r * WIDTH / rangeBlockSize + s].map(canvas[tag], canvas[(tag + 1) % 2], s * rangeBlockSize,
 						r * rangeBlockSize, rangeBlockSize);
-				;
 			}
 
 		}

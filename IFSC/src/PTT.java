@@ -1,4 +1,4 @@
-	import java.awt.image.BufferedImage;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -9,7 +9,7 @@ import java.nio.ByteOrder;
 import javax.imageio.ImageIO;
 
 public class PTT {
-	//test comment for git
+
 	@SuppressWarnings("static-access")
 	public static void write(final String inputFile, final String outputFile) {
 		BufferedImage image;
