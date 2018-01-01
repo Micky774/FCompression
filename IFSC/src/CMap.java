@@ -3,7 +3,7 @@ import java.nio.ByteBuffer;
 
 public class CMap {
 	public int size;
-	public int config;
+	public short config;
 	public short contrast;
 	public short brightness;
 
@@ -11,13 +11,15 @@ public class CMap {
 
 	}
 
+	// git test comment - Meekail
 	public CMap(byte[] code, int _size) {
 		ByteBuffer bb = ByteBuffer.wrap(code);
 		size = _size;
 		brightness = (short) TTP.byteToInt(bb.get());
 		short temp = (short) TTP.byteToInt(bb.get());
-		config = temp >> 2;
-		contrast = (temp);
+		config = (short) (temp >> 5);
+		contrast = (short) ((temp & 0x3 << 8) + TTP.byteToInt(bb.get()));
+
 	}
 
 	public static void main(String[] args) {
