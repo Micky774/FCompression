@@ -20,6 +20,7 @@ public class CMap {
 		contrast = (temp);
 	}
 
+	//THIS IS EMPTY, YOU NUMBSKULL
 	public static void main(String[] args) {
 
 	}
