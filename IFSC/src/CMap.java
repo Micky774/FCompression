@@ -12,6 +12,7 @@ public class CMap {
 	}
 
 	// git test comment - Meekail
+	// second git comment test - Meekail
 	public CMap(byte[] code, int _size) {
 		ByteBuffer bb = ByteBuffer.wrap(code);
 		size = _size;
