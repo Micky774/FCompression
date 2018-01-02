@@ -37,6 +37,7 @@ public class IFSEncoder {
 			code[5] = (byte) (position & 0xFF);
 			outputStream.write(code);
 		}
+		outputStream.close();
 	}
 
 	public static double[] selectBestDomain(BufferedImage image, int rx, int ry, int size) {
