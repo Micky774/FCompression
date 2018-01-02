@@ -4,83 +4,114 @@ import java.nio.ByteBuffer;
 public class CMap {
 	public int size;
 	public int config;
-	public short contrast;
-	public short brightness;
 	public int position;
+	public double contrast;
+	public double brightness;
+	public int dx, dy;
+	public int rx, ry;
 
-	public void map(BufferedImage domain, BufferedImage range, int rx, int ry, int size) {
-		int dx = position % (domain.getWidth() - size * 2);
-		int dy = position / (domain.getWidth() - size * 2);
-		int[][] Domain = CMap.subsample(CMap.imageToArray(domain, dx, dy, dx + 2 * size, dy + 2 * size));
-		int[][] Range = new int[Domain.length][Domain[0].length];
-		int r = Domain.length;
-		int s = Domain[0].length;
-		for (int[] i : Domain) {
-			for (int j : i) {
-				j = Math.min(j * contrast + brightness, 255);
-			}
-		}
+	public void setRange(int x, int y) {
+		rx = x;
+		ry = y;
+	}
+
+	public static short[][] permute(short[][] domain, int config) {
+		int r = domain.length;
+		int s = domain[0].length;
+		short[][] Range = new short[r][s];
 		switch (config) {
 		case 0:
 			break;
 		case 1:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[j][s - i - 1] = Domain[i][j];
+					Range[j][s - i - 1] = domain[i][j];
 				}
 			}
 			break;
 		case 2:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[s - i - 1][r - j - 1] = Domain[i][j];
+					Range[s - i - 1][r - j - 1] = domain[i][j];
 				}
 			}
 			break;
 		case 3:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[r - j - 1][i] = Domain[i][j];
+					Range[r - j - 1][i] = domain[i][j];
 				}
 			}
 			break;
 		case 4:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[j][i] = Domain[i][j];
+					Range[j][i] = domain[i][j];
 				}
 			}
 			break;
 		case 5:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[s - i - 1][j] = Domain[i][j];
+					Range[s - i - 1][j] = domain[i][j];
 				}
 			}
 			break;
 		case 6:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[r - j - 1][s - i - 1] = Domain[i][j];
+					Range[r - j - 1][s - i - 1] = domain[i][j];
 				}
 			}
 			break;
 		case 7:
 			for (int i = 0; i < r; i++) {
 				for (int j = 0; j < s; j++) {
-					Range[i][r - j - 1] = Domain[i][j];
+					Range[i][r - j - 1] = domain[i][j];
 				}
 			}
 			break;
 		}
+		return Range;
 	}
 
-	public static int[][] subsample(int[][] array) {
-		int[][] result = new int[array.length / 2][array[0].length];
+	public void map(BufferedImage domain, BufferedImage range) {
+
+		short[][] Domain = CMap.subsample(CMap.imageToArray(domain, dx, dy, dx + 2 * size, dy + 2 * size));
+
+		for (short[] i : Domain) {
+			for (short j : i) {
+				j = (short) Math.min(j * contrast + brightness, 255);
+			}
+		}
+
+		short[][] Range = CMap.permute(Domain, config);
+
+		int r = 0, s = 0, rgb = 0;
+
+		for (short[] i : Range) {
+			for (short j : i) {
+				rgb = 0xFF;
+				rgb <<= 8;
+				rgb += Range[r][s];
+				rgb <<= 8;
+				rgb += Range[r][s];
+				rgb <<= 8;
+				rgb += Range[r][s];
+				range.setRGB(rx + s, ry + r, rgb);
+				s++;
+			}
+			r++;
+			s = 0;
+		}
+	}
+
+	public static short[][] subsample(short[][] array) {
+		short[][] result = new short[array.length / 2][array[0].length];
 		int r = 0, s = 0;
-		for (int[] i : result) {
-			for (int j : i) {
-				j = (array[r][s] + array[r][s + 1] + array[r + 1][s] + array[r + 1][s + 1]) / 4;
+		for (short[] i : result) {
+			for (short j : i) {
+				j = (short) ((array[r][s] + array[r][s + 1] + array[r + 1][s] + array[r + 1][s + 1]) / 4);
 				s += 2;
 			}
 			r += 2;
@@ -96,12 +127,12 @@ public class CMap {
 	 * 
 	 * 
 	 */
-	public static int[][] imageToArray(BufferedImage image, int sx, int sy, int tx, int ty) {
-		int[][] result = new int[ty - sy][tx - sx];
+	public static short[][] imageToArray(BufferedImage image, int sx, int sy, int tx, int ty) {
+		short[][] result = new short[ty - sy][tx - sx];
 		int r = 0, s = 0;
-		for (int[] i : result) {
-			for (int j : i) {
-				j = image.getRGB(sx + s, sy + r);
+		for (short[] i : result) {
+			for (short j : i) {
+				j = (short) (image.getRGB(sx + s, sy + r) & 0xFF);
 				s++;
 			}
 			r++;
@@ -111,22 +142,23 @@ public class CMap {
 
 	}
 
-	public CMap(byte[] code, int _size) {
+	public CMap(byte[] code, int _size, BufferedImage domain) {
 		ByteBuffer bb = ByteBuffer.wrap(code);
 		size = _size;
-		brightness = (short) TTP.byteToInt(bb.get());
 		short temp = (short) TTP.byteToInt(bb.get());
 		config = temp >> 5;
-		contrast = (short) (temp & 0x31);
+		contrast = ((double) (temp & 0x1F)) / 31;
 		temp = (short) TTP.byteToInt(bb.get());
-		contrast += (short) (temp >> 3);
-		position = (short) (temp & 0x7);
+		brightness = temp >> 1;
+		position = (temp & 0x7F);
 		temp = (short) TTP.byteToInt(bb.get());
-		position += (short) temp;
+		position += temp;
 		temp = (short) TTP.byteToInt(bb.get());
-		position += (short) temp;
+		position += temp;
 		temp = (short) TTP.byteToInt(bb.get());
-		position += (short) temp;
+		position += temp;
+		dx = position % (domain.getWidth() - size * 2);
+		dy = position / (domain.getWidth() - size * 2);
 
 	}
 
