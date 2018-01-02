@@ -1,22 +1,72 @@
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 import javax.imageio.ImageIO;
 
 public class IFSEncoder {
 
 	@SuppressWarnings("unused")
-	public static void Encode(String inputFile, int size) throws IOException {
+	public static void Encode(String inputFile, String outputFile, int size) throws IOException {
 		File imageFile = new File(inputFile);
 		BufferedImage image = ImageIO.read(imageFile);
+		OutputStream outputStream = new FileOutputStream(outputFile);
+		outputStream.write(image.getHeight());
+		outputStream.write(image.getWidth());
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
 		int domainBlockCount = (image.getHeight() + 1 - 2 * size) * (image.getWidth() + 1 - 2 * size);
-		int[] comparison = new int[5];
-
+		int r = 0, s = 0;
+		double[] temp = new double[6];
+		byte[] code = new byte[5];
+		for (int i = 0; i < rangeBlockCount; i++) {
+			r = i / (image.getWidth() + 1 - size);
+			s = i % (image.getWidth() + 1 - size);
+			temp = IFSEncoder.selectBestDomain(image, s * size, r * size, size);
+			int position = (s / (2 * size)) * (r / (2 * size));
+			code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
+			code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
+			position >>= 1;
+			code[2] = (byte) (position & 0xFF);
+			position >>= 8;
+			code[3] = (byte) (position & 0xFF);
+			position >>= 8;
+			code[4] = (byte) (position & 0xFF);
+			position >>= 8;
+			code[5] = (byte) (position & 0xFF);
+			outputStream.write(code);
+		}
 	}
 
-	public static double[] regression(int[][] F, int[][] R) {
+	public static double[] selectBestDomain(BufferedImage image, int rx, int ry, int size) {
+		short[][] R = CMap.imageToArray(image, rx, ry, rx + size, ry + size);
+		short[][] D;
+		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1 };
+		double[] temp;
+		int r = 0, s = 0;
+		for (int i = 0; i < (image.getHeight() + 1 - 2 * size) * (image.getWidth() + 1 - 2 * size); i++) {
+			r = i / (image.getHeight() + 1 - 2 * size);
+			s = i % (image.getHeight() + 1 - 2 * size);
+			D = CMap.subsample(CMap.imageToArray(image, s, r, s + 2 * size, r + 2 * size));
+			for (int j = 0; j < 8; j++) {
+				D = CMap.permute(D, j);
+				temp = IFSEncoder.regression(D, R);
+				if (temp[2] < comparison[4]) {
+					comparison[0] = s;
+					comparison[1] = r;
+					comparison[2] = temp[0];
+					comparison[3] = temp[1];
+					comparison[4] = temp[2];
+					comparison[5] = j;
+				}
+			}
+		}
+
+		return comparison;
+	}
+
+	public static double[] regression(short[][] F, short[][] R) {
 		int a = 0, a2 = 0, b = 0, b2 = 0, ab = 0;
 		int n = F.length * F[0].length;
 		int g = 0;
@@ -39,7 +89,6 @@ public class IFSEncoder {
 	}
 
 	public static void main(String[] args) {
-		// TODO Auto-generated method stub
 
 	}
 

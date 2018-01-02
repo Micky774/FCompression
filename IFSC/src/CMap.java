@@ -21,6 +21,11 @@ public class CMap {
 		short[][] Range = new short[r][s];
 		switch (config) {
 		case 0:
+			for (int i = 0; i < r; i++) {
+				for (int j = 0; j < s; j++) {
+					Range[i][j] = domain[i][j];
+				}
+			}
 			break;
 		case 1:
 			for (int i = 0; i < r; i++) {
@@ -150,11 +155,14 @@ public class CMap {
 		contrast = ((double) (temp & 0x1F)) / 31;
 		temp = (short) TTP.byteToInt(bb.get());
 		brightness = temp >> 1;
-		position = (temp & 0x7F);
+		position = (temp & 0x1);
+		position <<= 1;
 		temp = (short) TTP.byteToInt(bb.get());
 		position += temp;
+		position <<= 8;
 		temp = (short) TTP.byteToInt(bb.get());
 		position += temp;
+		position <<= 8;
 		temp = (short) TTP.byteToInt(bb.get());
 		position += temp;
 		dx = position % (domain.getWidth() - size * 2);
