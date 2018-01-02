@@ -112,7 +112,7 @@ public class CMap {
 	}
 
 	public static short[][] subsample(short[][] array) {
-		short[][] result = new short[array.length / 2][array[0].length];
+		short[][] result = new short[array.length / 2][array[0].length / 2];
 		int r = 0, s = 0;
 		for (short[] i : result) {
 			for (short j : i) {
@@ -135,14 +135,19 @@ public class CMap {
 	public static short[][] imageToArray(BufferedImage image, int sx, int sy, int tx, int ty) {
 		short[][] result = new short[ty - sy][tx - sx];
 		int r = 0, s = 0;
-		for (short[] i : result) {
-			for (short j : i) {
-				j = (short) (image.getRGB(sx + s, sy + r) & 0xFF);
-				s++;
+		// System.out.println("Height: " + image.getHeight() + " and Width: " +
+		// image.getWidth());
+
+		// System.out.println(sx + " : " + sy);
+		for (int i = 0; i < ty - sy; i++) {
+			for (int j = 0; j < tx - sx; j++) {
+				result[i][j] = (short) (image.getRGB(sx + j, sy + i) & 0xFF);
 			}
-			r++;
-			s = 0;
-		}
+		} /*
+			 * for (short[] i : result) { for (short j : i) { if (sy != 0) {
+			 * System.out.println((sx + s) + " , " + (sy + r)); } j = (short)
+			 * (image.getRGB(sx + s, sy + r) & 0xFF); s++; } r++; s = 0; }
+			 */
 		return result;
 
 	}
@@ -171,7 +176,6 @@ public class CMap {
 	}
 
 	public static void main(String[] args) {
-
 	}
 
 }

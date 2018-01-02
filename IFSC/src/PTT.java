@@ -126,10 +126,42 @@ public class PTT {
 		}
 	}
 
+	public static void saveAsGray(String inputFile, String outputFile) {
+		File imageFile = new File(inputFile);
+		try {
+			BufferedImage image = ImageIO.read(imageFile);
+			for (int i = 0; i < image.getHeight(); i++) {
+				for (int j = 0; j < image.getWidth(); j++) {
+					int rgb = image.getRGB(j, i);
+					int r = (rgb >> 16) & 0xFF;
+					int g = (rgb >> 8) & 0xFF;
+					int b = (rgb & 0xFF);
+					int avg = ((r + g + b) / 3) & 0xFF;
+					int k = 0xFF;
+					k <<= 8;
+					k += avg;
+					k <<= 8;
+					k += avg;
+					k <<= 8;
+					k += avg;
+					// System.out.println(k);
+					image.setRGB(j, i, k);
+				}
+			}
+			File of = new File(outputFile);
+			ImageIO.write(image, "png", of);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 	public static void main(String[] args) {
 		// PTT.printBA(PTT.transcribe(17, 1, false));
 
-		PTT.write("Dice.png", "DiceTest");
+		// PTT.write("Dice.png", "DiceTest");
+		PTT.saveAsGray("TestTown.jpg", "TestTownG.png");
+
 		System.out.println("Success!");
 
 	}

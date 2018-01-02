@@ -1,3 +1,5 @@
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -8,34 +10,52 @@ import javax.imageio.ImageIO;
 
 public class IFSEncoder {
 
-	@SuppressWarnings("unused")
 	public static void Encode(String inputFile, String outputFile, int size) throws IOException {
 		File imageFile = new File(inputFile);
-		BufferedImage image = ImageIO.read(imageFile);
+		BufferedImage before = ImageIO.read(imageFile);
+		BufferedImage image;
+		int w = before.getWidth();
+		int h = before.getHeight();
+
+		if ((w % size == 0) && (h % size == 0)) {
+			image = before;
+		} else {
+			AffineTransform at = new AffineTransform();
+			double nx = (Math.ceil(((double) w) / size) * size);
+			double ny = (Math.ceil(((double) h) / size) * size);
+			double sx = nx / w;
+			double sy = ny / h;
+			at.scale(sx, sy);
+			image = new BufferedImage((int) nx, (int) ny, BufferedImage.TYPE_INT_ARGB);
+			System.out.println(sx + ":" + sy);
+			AffineTransformOp scaleOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+			scaleOp.filter(before, image);
+		}
+		System.out.println(image.getHeight() + ":" + image.getWidth());
 		OutputStream outputStream = new FileOutputStream(outputFile);
 		outputStream.write(image.getHeight());
 		outputStream.write(image.getWidth());
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
-		int domainBlockCount = (image.getHeight() + 1 - 2 * size) * (image.getWidth() + 1 - 2 * size);
-		int r = 0, s = 0;
 		double[] temp = new double[6];
 		byte[] code = new byte[5];
-		for (int i = 0; i < rangeBlockCount; i++) {
-			r = i / (image.getWidth() + 1 - size);
-			s = i % (image.getWidth() + 1 - size);
-			temp = IFSEncoder.selectBestDomain(image, s * size, r * size, size);
-			int position = (s / (2 * size)) * (r / (2 * size));
-			code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
-			code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
-			position >>= 1;
-			code[2] = (byte) (position & 0xFF);
-			position >>= 8;
-			code[3] = (byte) (position & 0xFF);
-			position >>= 8;
-			code[4] = (byte) (position & 0xFF);
-			position >>= 8;
-			code[5] = (byte) (position & 0xFF);
-			outputStream.write(code);
+		int t = 0;
+		for (int i = 0; i < image.getHeight() / size; i++) {
+			for (int j = 0; j < image.getWidth() / size; j++) {
+				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
+				int position = t;
+				System.out.println(t + "/" + rangeBlockCount + " complete");
+				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
+				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
+				position >>= 1;
+				code[2] = (byte) (position & 0xFF);
+				position >>= 8;
+				code[3] = (byte) (position & 0xFF);
+				position >>= 8;
+				code[4] = (byte) (position & 0xFF);
+				outputStream.write(code);
+				t++;
+
+			}
 		}
 		outputStream.close();
 	}
@@ -45,21 +65,21 @@ public class IFSEncoder {
 		short[][] D;
 		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1 };
 		double[] temp;
-		int r = 0, s = 0;
-		for (int i = 0; i < (image.getHeight() + 1 - 2 * size) * (image.getWidth() + 1 - 2 * size); i++) {
-			r = i / (image.getHeight() + 1 - 2 * size);
-			s = i % (image.getHeight() + 1 - 2 * size);
-			D = CMap.subsample(CMap.imageToArray(image, s, r, s + 2 * size, r + 2 * size));
-			for (int j = 0; j < 8; j++) {
-				D = CMap.permute(D, j);
-				temp = IFSEncoder.regression(D, R);
-				if (temp[2] < comparison[4]) {
-					comparison[0] = s;
-					comparison[1] = r;
-					comparison[2] = temp[0];
-					comparison[3] = temp[1];
-					comparison[4] = temp[2];
-					comparison[5] = j;
+		for (int i = 0; i < image.getHeight() + 1 - 2 * size; i++) {
+			for (int j = 0; j < image.getWidth() + 1 - 2 * size; j++) {
+				// System.out.println(j + " , " + i);
+				D = CMap.subsample(CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size));
+				for (int k = 0; k < 8; k++) {
+					D = CMap.permute(D, k);
+					temp = IFSEncoder.regression(D, R);
+					if (temp[2] < comparison[4]) {
+						comparison[0] = j;
+						comparison[1] = i;
+						comparison[2] = temp[0];
+						comparison[3] = temp[1];
+						comparison[4] = temp[2];
+						comparison[5] = k;
+					}
 				}
 			}
 		}
@@ -90,7 +110,13 @@ public class IFSEncoder {
 	}
 
 	public static void main(String[] args) {
-
+		try {
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook", 32);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		System.out.println("Success");
 	}
 
 }
