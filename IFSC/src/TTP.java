@@ -63,6 +63,17 @@ public class TTP {
 		}
 	}
 
+	public static byte[] intToByte(int x) {
+		byte[] result = new byte[4];
+		int i = 3;
+		while (i != -1) {
+			result[i] = (byte) (x & 0xFF);
+			x >>= 8;
+			i--;
+		}
+		return result;
+	}
+
 	public static int byteToInt(byte[] ar) {
 		byte[] array = new byte[4];
 		for (int i = 0; i < 4; i++) {

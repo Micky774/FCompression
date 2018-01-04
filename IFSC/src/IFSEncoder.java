@@ -33,8 +33,6 @@ public class IFSEncoder {
 		}
 		System.out.println(image.getHeight() + ":" + image.getWidth());
 		OutputStream outputStream = new FileOutputStream(outputFile);
-		outputStream.write(image.getHeight());
-		outputStream.write(image.getWidth());
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
 		double[] temp = new double[6];
 		byte[] code = new byte[5];

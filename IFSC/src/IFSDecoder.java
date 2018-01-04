@@ -3,7 +3,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
 import java.util.Random;
 
 import javax.swing.JFrame;
@@ -99,18 +98,12 @@ public class IFSDecoder {
 
 	}
 
-	public IFSDecoder(String inputFile, int size) {
+	public IFSDecoder(String inputFile, final int HEIGHT, final int WIDTH, int size) {
 		File f = new File(inputFile);
 
 		try {
 			InputStream inputStream = new FileInputStream(f);
 			byte[] buffer = new byte[4];
-			ByteBuffer bb = ByteBuffer.wrap(buffer);
-			inputStream.read(buffer);
-			HEIGHT = bb.getInt();
-			inputStream.read(buffer);
-			bb.clear();
-			WIDTH = bb.getInt();
 			rangeBlockSize = size;
 			rangeBlockCount = HEIGHT * WIDTH / (rangeBlockSize * rangeBlockSize);
 			canvas[0] = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
@@ -144,7 +137,7 @@ public class IFSDecoder {
 	}
 
 	public static void main(String[] args) {
-		// new IFSDecoder("TestCodeBook", 32);
+		new IFSDecoder("TestCodeBook", 608, 800, 32);
 	}
 
 }
