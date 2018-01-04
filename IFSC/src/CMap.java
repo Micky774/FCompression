@@ -134,7 +134,7 @@ public class CMap {
 	 */
 	public static short[][] imageToArray(BufferedImage image, int sx, int sy, int tx, int ty) {
 		short[][] result = new short[ty - sy][tx - sx];
-		int r = 0, s = 0;
+		// int r = 0, s = 0;
 		// System.out.println("Height: " + image.getHeight() + " and Width: " +
 		// image.getWidth());
 
