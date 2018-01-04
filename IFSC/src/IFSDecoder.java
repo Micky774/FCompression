@@ -38,6 +38,13 @@ public class IFSDecoder {
 
 	};
 
+	public static void printBinaries(String inputFile, int until) {
+		while (until != 0) {
+			until--;
+		}
+
+	}
+
 	public int getHeight() {
 		return this.HEIGHT;
 	}
@@ -65,10 +72,12 @@ public class IFSDecoder {
 				int fn = r * WRcount + s;
 				functionList[fn].map(canvas[tag], canvas[(tag + 1) % 2]);
 				//
-				// int dx=functionList[fn].dx; int dy=functionList[fn].dy; int[][]
+				// int dx=functionList[fn].dx; int dy=functionList[fn].dy;
+				// int[][]
 				// F=CMap.imageToArray(canvas[tag], dx, dy,
 				// dx+2*rangeBlockSize,dy+2*rangeBlockSize); int[][]
-				// R=CMap.imageToArray(canvas[(tag + 1) % 2], s * rangeBlockSize, r *
+				// R=CMap.imageToArray(canvas[(tag + 1) % 2], s *
+				// rangeBlockSize, r *
 				// rangeBlockSize, s * rangeBlockSize+rangeBlockSize, r *
 				// rangeBlockSize+rangeBlockSize);
 			}
@@ -100,6 +109,7 @@ public class IFSDecoder {
 			inputStream.read(buffer);
 			HEIGHT = bb.getInt();
 			inputStream.read(buffer);
+			bb.clear();
 			WIDTH = bb.getInt();
 			rangeBlockSize = size;
 			rangeBlockCount = HEIGHT * WIDTH / (rangeBlockSize * rangeBlockSize);
@@ -109,9 +119,9 @@ public class IFSDecoder {
 			HRcount = HEIGHT / rangeBlockSize;
 			CMap[] functionList = new CMap[rangeBlockCount];
 			byte[] mapBuffer = new byte[5];
-			inputStream.read(mapBuffer);
 			int i = 0;
 			for (CMap map : functionList) {
+				inputStream.read(mapBuffer);
 				map = new CMap(mapBuffer, size, canvas[tag]);
 				int ry = i / WRcount;
 				int rx = i % WRcount;
@@ -134,7 +144,7 @@ public class IFSDecoder {
 	}
 
 	public static void main(String[] args) {
-
+		// new IFSDecoder("TestCodeBook", 32);
 	}
 
 }
