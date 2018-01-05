@@ -36,11 +36,11 @@ public class IFSEncoder {
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
 		double[] temp = new double[6];
 		byte[] code = new byte[5];
-		int t = 0;
+		int t = 1;
 		for (int i = 0; i < image.getHeight() / size; i++) {
 			for (int j = 0; j < image.getWidth() / size; j++) {
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
-				int position = t;
+				int position = (int) temp[5];
 				System.out.println(t + "/" + rangeBlockCount + " complete");
 				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
 				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
@@ -88,11 +88,11 @@ public class IFSEncoder {
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
 		double[] temp = new double[6];
 		byte[] code = new byte[5];
-		int t = 0;
+		int t = 1;
 		for (int i = 0; i < image.getHeight() / size; i++) {
 			for (int j = 0; j < image.getWidth() / size; j++) {
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
-				int position = t;
+				int position = (int) temp[5];
 				System.out.println(t + "/" + rangeBlockCount + " complete");
 				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
 				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
@@ -112,13 +112,15 @@ public class IFSEncoder {
 
 	public static double[] selectBestDomain(BufferedImage image, int rx, int ry, int size) {
 		short[][] R = CMap.imageToArray(image, rx, ry, rx + size, ry + size);
+		short[][] F;
 		short[][] D;
-		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1 };
+		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1, -1 };
 		double[] temp;
 		for (int i = 0; i < image.getHeight() + 1 - 2 * size; i++) {
 			for (int j = 0; j < image.getWidth() + 1 - 2 * size; j++) {
 				// System.out.println(j + " , " + i);
-				D = CMap.subsample(CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size));
+				F = CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size);
+				D = CMap.subsample(F);
 				for (int k = 0; k < 8; k++) {
 					D = CMap.permute(D, k);
 					temp = IFSEncoder.regression(D, R);
@@ -129,6 +131,7 @@ public class IFSEncoder {
 						comparison[3] = temp[1];
 						comparison[4] = temp[2];
 						comparison[5] = k;
+						comparison[6] = i * (image.getHeight() + 1 - 2 * size) + j;
 					}
 				}
 			}
@@ -160,6 +163,7 @@ public class IFSEncoder {
 	}
 
 	public static void main(String[] args) {
+		System.out.println((int) (0xFF));
 		final long startTime = System.currentTimeMillis();
 		try {
 			IFSEncoder.Encode("TestTownG.png", "TestCodeBook", 128);

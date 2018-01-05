@@ -93,9 +93,7 @@ public class TTP {
 		int i = 0;
 		int result = 0;
 		while (i != 4) {
-			if ((b & 0x1) == 1) {
-				result += 1;
-			}
+			result += b & 0xFF;
 			result <<= 1;
 			i++;
 		}

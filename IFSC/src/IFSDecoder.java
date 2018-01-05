@@ -23,7 +23,7 @@ public class IFSDecoder {
 	private int HRcount;
 	private static Random rand = new Random();
 	private CMap[] functionList;
-	Timer timer = new Timer(0, event -> this.run());
+	Timer timer = null;
 	static JFrame WINDOW = new JFrame() {
 		/**
 		 * 
@@ -98,29 +98,38 @@ public class IFSDecoder {
 
 	}
 
-	public IFSDecoder(String inputFile, final int HEIGHT, final int WIDTH, int size) {
+	public IFSDecoder(String inputFile, final int _HEIGHT, final int _WIDTH, int size) {
 		File f = new File(inputFile);
+		HEIGHT = _HEIGHT;
+		WIDTH = _WIDTH;
 
 		try {
 			InputStream inputStream = new FileInputStream(f);
-			byte[] buffer = new byte[4];
 			rangeBlockSize = size;
 			rangeBlockCount = HEIGHT * WIDTH / (rangeBlockSize * rangeBlockSize);
 			canvas[0] = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 			canvas[1] = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 			WRcount = WIDTH / rangeBlockSize;
 			HRcount = HEIGHT / rangeBlockSize;
-			CMap[] functionList = new CMap[rangeBlockCount];
+			functionList = new CMap[rangeBlockCount];
 			byte[] mapBuffer = new byte[5];
-			int i = 0;
-			for (CMap map : functionList) {
+
+			for (int i = 0; i < functionList.length; i++) {
 				inputStream.read(mapBuffer);
-				map = new CMap(mapBuffer, size, canvas[tag]);
-				int ry = i / WRcount;
-				int rx = i % WRcount;
-				map.setRange(rx, ry);
-				i++;
+				functionList[i] = new CMap(mapBuffer, size, canvas[tag]);
+				int ry = (i / WRcount) * size;
+				int rx = (i % WRcount) * size;
+				functionList[i].setRange(rx, ry);
 			}
+			// int i = 0;
+			// for (CMap map : functionList) {
+			// inputStream.read(mapBuffer);
+			// map = new CMap(mapBuffer, size, canvas[tag]);
+			// int ry = (i / WRcount) * size;
+			// int rx = (i % WRcount) * size;
+			// map.setRange(rx, ry);
+			// i++;
+			// }
 
 			inputStream.close();
 		} catch (IOException e) {
@@ -129,6 +138,7 @@ public class IFSDecoder {
 		WINDOW.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		WINDOW.setSize(WIDTH, HEIGHT);
 		domainInitialize();
+		timer = new Timer(0, event -> this.run());
 		WINDOW.repaint();
 		WINDOW.setVisible(true);
 		timer.setInitialDelay(delay);
@@ -137,7 +147,7 @@ public class IFSDecoder {
 	}
 
 	public static void main(String[] args) {
-		new IFSDecoder("TestCodeBook", 608, 800, 32);
+		new IFSDecoder("TestCodeBook", 640, 896, 128);
 	}
 
 }

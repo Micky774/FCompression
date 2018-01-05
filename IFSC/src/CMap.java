@@ -1,5 +1,4 @@
 import java.awt.image.BufferedImage;
-import java.nio.ByteBuffer;
 
 public class CMap {
 	public int size;
@@ -114,20 +113,18 @@ public class CMap {
 	public static short[][] subsample(short[][] array) {
 		short[][] result = new short[array.length / 2][array[0].length / 2];
 		int r = 0, s = 0;
-		for (short[] i : result) {
-			for (short j : i) {
-				j = (short) ((array[r][s] + array[r][s + 1] + array[r + 1][s] + array[r + 1][s + 1]) / 4);
-				s += 2;
+		for (int i = 0; i < array.length / 2; i++) {
+			for (int j = 0; j < array[0].length / 2; j++) {
+				result[i][j] = (short) ((array[i * 2][j * 2] + array[i * 2][j * 2 + 1] + array[i * 2 + 1][j * 2]
+						+ array[i * 2 + 1][j * 2 + 1]) / 4);
 			}
-			r += 2;
-			s = 0;
 		}
 		return result;
 	}
 
 	/**
-	 * @return a 2D array of gray values (as RGB ints) coresponding to the given
-	 *         rectangle
+	 * @return a 2D array of gray values (as RGB ints) corresponding to the
+	 *         given rectangle
 	 * 
 	 * 
 	 * 
@@ -153,25 +150,24 @@ public class CMap {
 	}
 
 	public CMap(byte[] code, int _size, BufferedImage domain) {
-		ByteBuffer bb = ByteBuffer.wrap(code);
 		size = _size;
-		short temp = (short) TTP.byteToInt(bb.get());
+		short temp = (short) (code[0] & 0xFF);
 		config = temp >> 5;
 		contrast = ((double) (temp & 0x1F)) / 31;
-		temp = (short) TTP.byteToInt(bb.get());
+		temp = (short) (code[1] & 0xFF);
 		brightness = temp >> 1;
 		position = (temp & 0x1);
 		position <<= 1;
-		temp = (short) TTP.byteToInt(bb.get());
+		temp = (short) (code[2] & 0xFF);
 		position += temp;
 		position <<= 8;
-		temp = (short) TTP.byteToInt(bb.get());
+		temp = (short) (code[3] & 0xFF);
 		position += temp;
 		position <<= 8;
-		temp = (short) TTP.byteToInt(bb.get());
+		temp = (short) (code[4] & 0xFF);
 		position += temp;
-		dx = position % (domain.getWidth() - size * 2);
-		dy = position / (domain.getWidth() - size * 2);
+		dx = position % (domain.getWidth() - size * 2 + 1);
+		dy = position / (domain.getWidth() - size * 2 + 1);
 
 	}
 
