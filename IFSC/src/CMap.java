@@ -112,7 +112,6 @@ public class CMap {
 
 	public static short[][] subsample(short[][] array) {
 		short[][] result = new short[array.length / 2][array[0].length / 2];
-		int r = 0, s = 0;
 		for (int i = 0; i < array.length / 2; i++) {
 			for (int j = 0; j < array[0].length / 2; j++) {
 				result[i][j] = (short) ((array[i * 2][j * 2] + array[i * 2][j * 2 + 1] + array[i * 2 + 1][j * 2]
