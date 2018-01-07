@@ -8,7 +8,7 @@ public class CMap {
 	public double brightness;
 	public int dx, dy;
 	public int rx, ry;
-		//Tim's test comment
+
 	public void setRange(int x, int y) {
 		rx = x;
 		ry = y;

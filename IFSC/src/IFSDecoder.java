@@ -66,21 +66,8 @@ public class IFSDecoder {
 	}
 
 	private void domainMap() {
-		for (int r = 0; r < HRcount; r++) {
-			for (int s = 0; s < WRcount; s++) {
-				int fn = r * WRcount + s;
-				functionList[fn].map(canvas[tag], canvas[(tag + 1) % 2]);
-				//
-				// int dx=functionList[fn].dx; int dy=functionList[fn].dy;
-				// int[][]
-				// F=CMap.imageToArray(canvas[tag], dx, dy,
-				// dx+2*rangeBlockSize,dy+2*rangeBlockSize); int[][]
-				// R=CMap.imageToArray(canvas[(tag + 1) % 2], s *
-				// rangeBlockSize, r *
-				// rangeBlockSize, s * rangeBlockSize+rangeBlockSize, r *
-				// rangeBlockSize+rangeBlockSize);
-			}
-
+		for (CMap cmap : functionList) {
+			cmap.map(canvas[tag], canvas[(tag + 1) % 2]);
 		}
 		tag = (tag + 1) % 2;
 	}
@@ -121,16 +108,6 @@ public class IFSDecoder {
 				int rx = (i % WRcount) * size;
 				functionList[i].setRange(rx, ry);
 			}
-			// int i = 0;
-			// for (CMap map : functionList) {
-			// inputStream.read(mapBuffer);
-			// map = new CMap(mapBuffer, size, canvas[tag]);
-			// int ry = (i / WRcount) * size;
-			// int rx = (i % WRcount) * size;
-			// map.setRange(rx, ry);
-			// i++;
-			// }
-
 			inputStream.close();
 		} catch (IOException e) {
 			e.printStackTrace();
