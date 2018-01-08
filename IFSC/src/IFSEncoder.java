@@ -42,7 +42,7 @@ public class IFSEncoder {
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
 				int position = (int) temp[6];
 				System.out.println(t + "/" + rangeBlockCount + " complete");
-				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
+				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2])) & 0x1F));
 				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
 				position >>= 1;
 				code[2] = (byte) (position & 0xFF);
@@ -123,7 +123,14 @@ public class IFSEncoder {
 				D = CMap.subsample(F);
 				for (int k = 0; k < 8; k++) {
 					D = CMap.permute(D, k);
-					temp = IFSEncoder.regression(D, R);
+					int b = 0, b2 = 0;
+					for (short[] u : R) {
+						for (short v : u) {
+							b += v;
+							b2 += v * v;
+						}
+					}
+					temp = IFSEncoder.regression(D, R, b, b2);
 					if (temp[2] < comparison[4]) {
 						comparison[0] = j;
 						comparison[1] = i;
@@ -140,8 +147,8 @@ public class IFSEncoder {
 		return comparison;
 	}
 
-	public static double[] regression(short[][] F, short[][] R) {
-		int a = 0, a2 = 0, b = 0, b2 = 0, ab = 0;
+	public static double[] regression(short[][] F, short[][] R, long b, long b2) {
+		long a = 0, a2 = 0, ab = 0;
 		int n = F.length * F[0].length;
 		int g = 0;
 		double s = 0;
@@ -149,16 +156,18 @@ public class IFSEncoder {
 		for (int i = 0; i < F.length; i++) {
 			for (int j = 0; j < F[0].length; j++) {
 				a += F[i][j];
-				b += R[i][j];
 				ab += F[i][j] * R[i][j];
 				a2 += F[i][j] * F[i][j];
-				b2 += R[i][j] * R[i][j];
 			}
 		}
-		s = (((double) n * ab - a * b) / (n * a2 - a * a));
-		g = (int) (((double) b - s * a) / (n));
+		double s1 = (((double) n * ab - a * b) / (n * a2 - a * a));
+		double s2 = Math.min(s1, 1.0);
+		double s3 = Math.max(s2, 0);
+		double s4 = Math.round(s3 * 31);
+		s = s4 / 31;
+		g = Math.min(Math.max((int) (((double) b - s * a) / (n)), 0) / 2, 255);
 		ms = ((double) b2 + s * (s * a2 - 2 * ab + 2 * g * a) + g * (n * g - 2 * b)) / (n);
-		double[] result = { s, g, Math.sqrt(ms) };
+		double[] result = { s4, g, Math.sqrt(ms) };
 		return result;
 	}
 
