@@ -44,6 +44,7 @@ public class IFSEncoder {
 				int config = (int) temp[5];
 				int contrast = (int) temp[2];
 				int brightness = (int) temp[3];
+
 				short p4 = (short) (position & 0xFF);
 				position >>= 8;
 				short p3 = (short) (position & 0xFF);
@@ -52,12 +53,16 @@ public class IFSEncoder {
 				position >>= 1;
 				short p1 = (short) (position & 0x1);
 
+				byte con = (byte) ((config << 5) + contrast);
 				System.out.println(t + "/" + rangeBlockCount + " complete");
-				code[0] = (byte) (((config) & 0x7) << 5 + (contrast & 0x1F));
-				code[1] = (byte) (((brightness) & 0x7F) << 1 + p1);
+
+				code[0] = con;
+				code[1] = (byte) (brightness & 0xFF);
+				code[1] <<= 1;
+				code[1] += p1;
 				code[2] = (byte) p2;
 				code[3] = (byte) p3;
-				code[4] = (byte) (p4 & 0xFF);
+				code[4] = (byte) p4;
 				outputStream.write(code);
 				t++;
 
@@ -118,27 +123,40 @@ public class IFSEncoder {
 		outputStream.close();
 	}
 
+	// SCAN DOMAIN-->RANGE NOT THE OTHER WAY AROUND. STORE RANGE CONSTANTS
+	public static double[] selectBestRange() {
+		double[] result = null;
+		return result;
+	}
+
 	public static double[] selectBestDomain(BufferedImage image, int rx, int ry, int size) {
 		short[][] R = CMap.imageToArray(image, rx, ry, rx + size, ry + size);
 		short[][] F;
 		short[][] D;
 		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1, -1 };
 		double[] temp;
+		int b = 0, b2 = 0;
+		for (short[] u : R) {
+			for (short v : u) {
+				b += v;
+				b2 += v * v;
+			}
+		}
+		long a = 0, a2 = 0;
 		for (int i = 0; i < image.getHeight() + 1 - 2 * size; i++) {
 			for (int j = 0; j < image.getWidth() + 1 - 2 * size; j++) {
 				// System.out.println(j + " , " + i);
 				F = CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size);
 				D = CMap.subsample(F);
+				for (short[] u : D) {
+					for (short v : u) {
+						a += v;
+						a2 += v * v;
+					}
+				}
 				for (int k = 0; k < 8; k++) {
 					D = CMap.permute(D, k);
-					int b = 0, b2 = 0;
-					for (short[] u : R) {
-						for (short v : u) {
-							b += v;
-							b2 += v * v;
-						}
-					}
-					temp = IFSEncoder.regression(D, R, b, b2);
+					temp = IFSEncoder.regression(D, R, a, a2, b, b2);
 					if (temp[2] < comparison[4]) {
 						comparison[0] = j;
 						comparison[1] = i;
@@ -155,17 +173,15 @@ public class IFSEncoder {
 		return comparison;
 	}
 
-	public static double[] regression(short[][] F, short[][] R, long b, long b2) {
-		long a = 0, a2 = 0, ab = 0;
+	public static double[] regression(short[][] F, short[][] R, long a, long a2, long b, long b2) {
+		long ab = 0;
 		int n = F.length * F[0].length;
 		int g = 0;
 		double s = 0;
 		double ms = 0;
 		for (int i = 0; i < F.length; i++) {
 			for (int j = 0; j < F[0].length; j++) {
-				a += F[i][j];
 				ab += F[i][j] * R[i][j];
-				a2 += F[i][j] * F[i][j];
 			}
 		}
 		double s1 = (((double) n * ab - a * b) / (n * a2 - a * a));
@@ -183,7 +199,7 @@ public class IFSEncoder {
 		System.out.println((int) (0xFF));
 		final long startTime = System.currentTimeMillis();
 		try {
-			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 128);
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook1", 128);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
