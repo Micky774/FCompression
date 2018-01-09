@@ -157,20 +157,19 @@ public class CMap {
 		brightness = temp >> 1;
 		position = (temp & 0x1);
 		position <<= 1;
-		temp = (short) (code[2] & 0xFF);
-		position += temp;
+		position += (short) (code[2] & 0xFF);
 		position <<= 8;
-		temp = (short) (code[3] & 0xFF);
-		position += temp;
+		position += (short) (code[3] & 0xFF);
 		position <<= 8;
-		temp = (short) (code[4] & 0xFF);
-		position += temp;
+		position += (short) (code[4] & 0xFF);
 		dx = position % (domain.getWidth() - size * 2 + 1);
 		dy = position / (domain.getWidth() - size * 2 + 1);
 
 	}
 
 	public static void main(String[] args) {
+		byte b = -128;
+		System.out.println((b & 0xFF));
 	}
 
 }

@@ -41,15 +41,23 @@ public class IFSEncoder {
 			for (int j = 0; j < image.getWidth() / size; j++) {
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
 				int position = (int) temp[6];
-				System.out.println(t + "/" + rangeBlockCount + " complete");
-				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2])) & 0x1F));
-				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
+				int config = (int) temp[5];
+				int contrast = (int) temp[2];
+				int brightness = (int) temp[3];
+				short p4 = (short) (position & 0xFF);
+				position >>= 8;
+				short p3 = (short) (position & 0xFF);
+				position >>= 8;
+				short p2 = (short) (position & 0xFF);
 				position >>= 1;
-				code[2] = (byte) (position & 0xFF);
-				position >>= 8;
-				code[3] = (byte) (position & 0xFF);
-				position >>= 8;
-				code[4] = (byte) (position & 0xFF);
+				short p1 = (short) (position & 0x1);
+
+				System.out.println(t + "/" + rangeBlockCount + " complete");
+				code[0] = (byte) (((config) & 0x7) << 5 + (contrast & 0x1F));
+				code[1] = (byte) (((brightness) & 0x7F) << 1 + p1);
+				code[2] = (byte) p2;
+				code[3] = (byte) p3;
+				code[4] = (byte) (p4 & 0xFF);
 				outputStream.write(code);
 				t++;
 
@@ -175,7 +183,7 @@ public class IFSEncoder {
 		System.out.println((int) (0xFF));
 		final long startTime = System.currentTimeMillis();
 		try {
-			IFSEncoder.Encode("TestTownG.png", "TestCodeBook", 128);
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 128);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
