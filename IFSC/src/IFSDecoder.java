@@ -122,7 +122,7 @@ public class IFSDecoder {
 	}
 
 	public static void main(String[] args) {
-		new IFSDecoder("TestCodeBook", 640, 896, 128);
+		new IFSDecoder("TestCodeBook1", 640, 896, 128);
 	}
 
 }
