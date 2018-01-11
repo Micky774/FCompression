@@ -16,6 +16,7 @@ public class IFSEncoder {
 		BufferedImage image;
 		int w = before.getWidth();
 		int h = before.getHeight();
+		final int MAX_THREAD = 3;
 
 		if ((w % size == 0) && (h % size == 0)) {
 			image = before;
@@ -33,26 +34,21 @@ public class IFSEncoder {
 		}
 		System.out.println(image.getHeight() + ":" + image.getWidth());
 		OutputStream outputStream = new FileOutputStream(outputFile);
-		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
-		double[] temp = new double[7];
-		byte[] code = new byte[5];
-		int t = 1;
-		for (int i = 0; i < image.getHeight() / size; i++) {
-			for (int j = 0; j < image.getWidth() / size; j++) {
-				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
-				int position = (int) temp[6];
-				System.out.println(t + "/" + rangeBlockCount + " complete");
-				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
-				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
-				position >>= 1;
-				code[2] = (byte) (position & 0xFF);
-				position >>= 8;
-				code[3] = (byte) (position & 0xFF);
-				position >>= 8;
-				code[4] = (byte) (position & 0xFF);
-				outputStream.write(code);
-				t++;
-
+		EncodeThread[] threadArray = new EncodeThread[Math.min(MAX_THREAD, image.getHeight()/size)];
+		for (int i = 0; i < Math.min(MAX_THREAD, image.getHeight()/size); i++)
+		{
+			threadArray[i] = new EncodeThread(i, size, image, outputStream, threadArray);
+			threadArray[i].start();
+		}
+		while (threadArray[MAX_THREAD - 1].isAlive())
+		{
+			try
+			{
+				Thread.sleep(10000);
+			}
+			catch(InterruptedException ie)
+			{
+				ie.printStackTrace();
 			}
 		}
 		outputStream.close();
