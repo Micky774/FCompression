@@ -5,7 +5,7 @@ public class CMap {
 	public int config;
 	public int position;
 	public double contrast;
-	public double brightness;
+	public int brightness;
 	public int dx, dy;
 	public int rx, ry;
 
@@ -83,18 +83,22 @@ public class CMap {
 
 		short[][] Domain = CMap.subsample(CMap.imageToArray(domain, dx, dy, dx + 2 * size, dy + 2 * size));
 
-		for (short[] i : Domain) {
-			for (short j : i) {
-				j = (short) Math.min(j * contrast + brightness, 255);
+		for (int i = 0; i < Domain.length; i++) {
+			for (int j = 0; j < Domain[0].length; j++) {
+				Domain[i][j] = (short) Math.min(Domain[i][j] * contrast + brightness, 255);
+
 			}
 		}
-
+		/*
+		 * for (short[] i : Domain) { for (short j : i) { j = (short) Math.min(j
+		 * * contrast + brightness, 255); } }
+		 */
 		short[][] Range = CMap.permute(Domain, config);
 
 		int r = 0, s = 0, rgb = 0;
 
-		for (short[] i : Range) {
-			for (short j : i) {
+		for (int i = 0; i < Range.length; i++) {
+			for (int j = 0; j < Range[0].length; j++) {
 				rgb = 0xFF;
 				rgb <<= 8;
 				rgb += Range[r][s];
@@ -102,11 +106,8 @@ public class CMap {
 				rgb += Range[r][s];
 				rgb <<= 8;
 				rgb += Range[r][s];
-				range.setRGB(rx + s, ry + r, rgb);
-				s++;
+				range.setRGB(rx + j, ry + i, rgb);
 			}
-			r++;
-			s = 0;
 		}
 	}
 

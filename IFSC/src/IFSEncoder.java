@@ -31,6 +31,7 @@ public class IFSEncoder {
 			AffineTransformOp scaleOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
 			scaleOp.filter(before, image);
 		}
+
 		System.out.println(image.getHeight() + ":" + image.getWidth());
 		OutputStream outputStream = new FileOutputStream(outputFile);
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
@@ -40,6 +41,68 @@ public class IFSEncoder {
 		for (int i = 0; i < image.getHeight() / size; i++) {
 			for (int j = 0; j < image.getWidth() / size; j++) {
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
+				int position = (int) temp[6];
+				int config = (int) temp[5];
+				int contrast = (int) temp[2];
+				int brightness = (int) temp[3];
+
+				short p4 = (short) (position & 0xFF);
+				position >>= 8;
+				short p3 = (short) (position & 0xFF);
+				position >>= 8;
+				short p2 = (short) (position & 0xFF);
+				position >>= 1;
+				short p1 = (short) (position & 0x1);
+
+				byte con = (byte) ((config << 5) + contrast);
+				System.out.println(t + "/" + rangeBlockCount + " complete");
+
+				code[0] = con;
+				code[1] = (byte) (brightness & 0xFF);
+				code[1] <<= 1;
+				code[1] += p1;
+				code[2] = (byte) p2;
+				code[3] = (byte) p3;
+				code[4] = (byte) p4;
+				outputStream.write(code);
+				t++;
+
+			}
+		}
+		outputStream.close();
+	}
+
+	public static void Encode(String inputFile, String outputFile, int size, double threshold) throws IOException {
+		File imageFile = new File(inputFile);
+		BufferedImage before = ImageIO.read(imageFile);
+		BufferedImage image;
+		int w = before.getWidth();
+		int h = before.getHeight();
+
+		if ((w % size == 0) && (h % size == 0)) {
+			image = before;
+		} else {
+			AffineTransform at = new AffineTransform();
+			double nx = (Math.ceil(((double) w) / size) * size);
+			double ny = (Math.ceil(((double) h) / size) * size);
+			double sx = nx / w;
+			double sy = ny / h;
+			at.scale(sx, sy);
+			image = new BufferedImage((int) nx, (int) ny, BufferedImage.TYPE_INT_ARGB);
+			System.out.println(sx + ":" + sy);
+			AffineTransformOp scaleOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+			scaleOp.filter(before, image);
+		}
+
+		System.out.println(image.getHeight() + ":" + image.getWidth());
+		OutputStream outputStream = new FileOutputStream(outputFile);
+		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
+		double[] temp = new double[7];
+		byte[] code = new byte[5];
+		int t = 1;
+		for (int i = 0; i < image.getHeight() / size; i++) {
+			for (int j = 0; j < image.getWidth() / size; j++) {
+				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size, threshold);
 				int position = (int) temp[6];
 				int config = (int) temp[5];
 				int contrast = (int) temp[2];
@@ -173,6 +236,59 @@ public class IFSEncoder {
 		return comparison;
 	}
 
+	public static double[] selectBestDomain(BufferedImage image, int rx, int ry, int size, double threshold) {
+		short[][] R = CMap.imageToArray(image, rx, ry, rx + size, ry + size);
+		short[][] F;
+		short[][] D;
+		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1, -1 };
+		double[] temp;
+		int b = 0, b2 = 0;
+		for (short[] u : R) {
+			for (short v : u) {
+				b += v;
+				b2 += v * v;
+			}
+		}
+		long a = 0, a2 = 0;
+		for (int i = 0; i < image.getHeight() + 1 - 2 * size; i++) {
+			for (int j = 0; j < image.getWidth() + 1 - 2 * size; j++) {
+				// System.out.println(j + " , " + i);
+				F = CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size);
+				D = CMap.subsample(F);
+				for (short[] u : D) {
+					for (short v : u) {
+						a += v;
+						a2 += v * v;
+					}
+				}
+				for (int k = 0; k < 8; k++) {
+					D = CMap.permute(D, k);
+					temp = IFSEncoder.regression(D, R, a, a2, b, b2);
+					if (temp[2] < threshold) {
+						comparison[0] = j;
+						comparison[1] = i;
+						comparison[2] = temp[0];
+						comparison[3] = temp[1];
+						comparison[4] = temp[2];
+						comparison[5] = k;
+						comparison[6] = i * (image.getHeight() + 1 - 2 * size) + j;
+						return comparison;
+					} else if (temp[2] < comparison[4]) {
+						comparison[0] = j;
+						comparison[1] = i;
+						comparison[2] = temp[0];
+						comparison[3] = temp[1];
+						comparison[4] = temp[2];
+						comparison[5] = k;
+						comparison[6] = i * (image.getHeight() + 1 - 2 * size) + j;
+					}
+				}
+			}
+		}
+
+		return comparison;
+	}
+
 	public static double[] regression(short[][] F, short[][] R, long a, long a2, long b, long b2) {
 		long ab = 0;
 		int n = F.length * F[0].length;
@@ -196,12 +312,10 @@ public class IFSEncoder {
 	}
 
 	public static void main(String[] args) {
-		System.out.println((int) (0xFF));
 		final long startTime = System.currentTimeMillis();
 		try {
-			IFSEncoder.Encode("TestTownG.png", "TestCodeBook1", 128);
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook3", 8, 125);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		final long endTime = System.currentTimeMillis();
