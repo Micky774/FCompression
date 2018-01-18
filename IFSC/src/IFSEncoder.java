@@ -16,7 +16,7 @@ public class IFSEncoder {
 		BufferedImage image;
 		int w = before.getWidth();
 		int h = before.getHeight();
-		final int MAX_THREAD = 3;
+		final int MAX_THREAD = 4;
 
 		if ((w % size == 0) && (h % size == 0)) {
 			image = before;
@@ -34,13 +34,15 @@ public class IFSEncoder {
 		}
 		System.out.println(image.getHeight() + ":" + image.getWidth());
 		OutputStream outputStream = new FileOutputStream(outputFile);
-		EncodeThread[] threadArray = new EncodeThread[Math.min(MAX_THREAD, image.getHeight()/size)];
-		for (int i = 0; i < Math.min(MAX_THREAD, image.getHeight()/size); i++)
+		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
+		int numThreads = Math.min(MAX_THREAD, rangeBlockCount);
+		EncodeThread[] threadArray = new EncodeThread[numThreads];
+		for (int i = 0; i < threadArray.length; i++)
 		{
-			threadArray[i] = new EncodeThread(i, size, image, outputStream, threadArray);
+			threadArray[i] = new EncodeThread(i, size, rangeBlockCount, image, outputStream, threadArray);
 			threadArray[i].start();
 		}
-		while (threadArray[MAX_THREAD - 1].isAlive())
+		while (threadArray[numThreads - 1].isAlive())
 		{
 			try
 			{
@@ -106,20 +108,40 @@ public class IFSEncoder {
 		outputStream.close();
 	}
 
+	// SCAN DOMAIN-->RANGE NOT THE OTHER WAY AROUND. STORE RANGE CONSTANTS
+	public static double[] selectBestRange() {
+		double[] result = null;
+		return result;
+	}
+
 	public static double[] selectBestDomain(BufferedImage image, int rx, int ry, int size) {
 		short[][] R = CMap.imageToArray(image, rx, ry, rx + size, ry + size);
 		short[][] F;
 		short[][] D;
 		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1, -1 };
 		double[] temp;
+		int b = 0, b2 = 0;
+		for (short[] u : R) {
+			for (short v : u) {
+				b += v;
+				b2 += v * v;
+			}
+		}
+		long a = 0, a2 = 0;
 		for (int i = 0; i < image.getHeight() + 1 - 2 * size; i++) {
 			for (int j = 0; j < image.getWidth() + 1 - 2 * size; j++) {
 				// System.out.println(j + " , " + i);
 				F = CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size);
 				D = CMap.subsample(F);
+				for (short[] u : D) {
+					for (short v : u) {
+						a += v;
+						a2 += v * v;
+					}
+				}
 				for (int k = 0; k < 8; k++) {
 					D = CMap.permute(D, k);
-					temp = IFSEncoder.regression(D, R);
+					temp = IFSEncoder.regression(D, R, a, a2, b, b2);
 					if (temp[2] < comparison[4]) {
 						comparison[0] = j;
 						comparison[1] = i;
@@ -136,25 +158,25 @@ public class IFSEncoder {
 		return comparison;
 	}
 
-	public static double[] regression(short[][] F, short[][] R) {
-		int a = 0, a2 = 0, b = 0, b2 = 0, ab = 0;
+	public static double[] regression(short[][] F, short[][] R, long a, long a2, long b, long b2) {
+		long ab = 0;
 		int n = F.length * F[0].length;
 		int g = 0;
 		double s = 0;
 		double ms = 0;
 		for (int i = 0; i < F.length; i++) {
 			for (int j = 0; j < F[0].length; j++) {
-				a += F[i][j];
-				b += R[i][j];
 				ab += F[i][j] * R[i][j];
-				a2 += F[i][j] * F[i][j];
-				b2 += R[i][j] * R[i][j];
 			}
 		}
-		s = (((double) n * ab - a * b) / (n * a2 - a * a));
-		g = (int) (((double) b - s * a) / (n));
+		double s1 = (((double) n * ab - a * b) / (n * a2 - a * a));
+		double s2 = Math.min(s1, 1.0);
+		double s3 = Math.max(s2, 0);
+		double s4 = Math.round(s3 * 31);
+		s = s4 / 31;
+		g = Math.min(Math.max((int) (((double) b - s * a) / (n)), 0) / 2, 255);
 		ms = ((double) b2 + s * (s * a2 - 2 * ab + 2 * g * a) + g * (n * g - 2 * b)) / (n);
-		double[] result = { s, g, Math.sqrt(ms) };
+		double[] result = { s4, g, Math.sqrt(ms) };
 		return result;
 	}
 
@@ -162,7 +184,7 @@ public class IFSEncoder {
 		System.out.println((int) (0xFF));
 		final long startTime = System.currentTimeMillis();
 		try {
-			IFSEncoder.Encode("TestTownG.png", "TestCodeBook", 128);
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 128);
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

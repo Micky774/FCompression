@@ -3,7 +3,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 public class EncodeThread extends Thread
 {
-	private int size;
+	private int size, rangeBlockCount;
 	private BufferedImage image;
 	private OutputStream output;
 	private EncodeThread[] threadArray;
@@ -15,10 +15,11 @@ public class EncodeThread extends Thread
 	 * @param imageConstruct - the input image
 	 * @param outputConstruct - the OutputStream used to write the code to the output file
 	 */
-	public EncodeThread(int threadIDConstruct, int sizeConstruct, BufferedImage imageConstruct, OutputStream outputConstruct, EncodeThread[] threadArrayConstruct)
+	public EncodeThread(int threadIDConstruct, int sizeConstruct, int rangeBlockCountConstruct, BufferedImage imageConstruct, OutputStream outputConstruct, EncodeThread[] threadArrayConstruct)
 	{
 		threadID = threadIDConstruct;
 		size = sizeConstruct;
+		rangeBlockCount = rangeBlockCountConstruct;
 		image = imageConstruct;
 		output = outputConstruct;
 		threadArray = threadArrayConstruct;
@@ -26,20 +27,40 @@ public class EncodeThread extends Thread
 	
 	public void run()
 	{
-		int totalRows = image.getHeight()/size;
-		int startBlockRow = threadID * (totalRows / threadArray.length), endBlockRow;
-		if (threadID == threadArray.length - 1)
-			endBlockRow = startBlockRow + (totalRows / threadArray.length) + (totalRows % threadArray.length);
-		else
-			endBlockRow = startBlockRow + (totalRows / threadArray.length);
-		double[][][] temp = new double[endBlockRow - startBlockRow][image.getWidth()/size][7];
-		byte[] code = new byte[5];
-		for (int i = 0; i < temp.length; i++)
+		int rangeBlocksCovered = rangeBlockCount / threadArray.length;
+		int startRangeBlock = Math.min(threadID, rangeBlockCount % threadArray.length) * (rangeBlocksCovered + 1) + Math.max((threadID - (rangeBlockCount % threadArray.length)), 0) * rangeBlocksCovered;
+		if(threadID < rangeBlockCount % threadArray.length)
+			rangeBlocksCovered++;
+		double[] temp = new double[7];
+		byte[][] code = new byte[rangeBlocksCovered][5];
+		for(int i = 0; i < rangeBlocksCovered; i++)
 		{
-			for(int j = 0; j < temp[i].length; j++)
-			{
-				temp[i][j] = IFSEncoder.selectBestDomain(image, j * size, (startBlockRow + i) * size, size);
-			}
+			int rangeBlockRow = (startRangeBlock + i) / (image.getWidth() / size);
+			int rangeBlockColumn = (startRangeBlock + i) % (image.getWidth() / size);
+			temp = IFSEncoder.selectBestDomain(image, rangeBlockColumn * size, rangeBlockRow * size, size);
+			int position = (int) temp[6];
+			int config = (int) temp[5];
+			int contrast = (int) temp[2];
+			int brightness = (int) temp[3];
+
+			short p4 = (short) (position & 0xFF);
+			position >>= 8;
+			short p3 = (short) (position & 0xFF);
+			position >>= 8;
+			short p2 = (short) (position & 0xFF);
+			position >>= 1;
+			short p1 = (short) (position & 0x1);
+
+			byte con = (byte) ((config << 5) + contrast);
+			System.out.println((startRangeBlock + i + 1) + "/" + rangeBlockCount + " complete");
+
+			code[i][0] = con;
+			code[i][1] = (byte) (brightness & 0xFF);
+			code[i][1] <<= 1;
+			code[i][1] += p1;
+			code[i][2] = (byte) p2;
+			code[i][3] = (byte) p3;
+			code[i][4] = (byte) p4;
 		}
 		if(threadID > 0)
 		{
@@ -52,28 +73,17 @@ public class EncodeThread extends Thread
 				ie.printStackTrace();
 			}
 		}
-		for (double[][] rowData : temp)
+		for (int i = 0; i < rangeBlocksCovered; i++)
 		{
-			for(double[] squareData : rowData)
+			try
 			{
-				int position = (int) squareData[6];
-				code[0] = (byte) ((((int) squareData[5]) & 0x7) << 5 + ((Math.round(squareData[2] * 31)) & 0x1F));
-				code[1] = (byte) ((((int) squareData[3]) & 0x7F) << 1 + (position & 0x1));
-				position >>= 1;
-				code[2] = (byte) (position & 0xFF);
-				position >>= 8;
-				code[3] = (byte) (position & 0xFF);
-				position >>= 8;
-				code[4] = (byte) (position & 0xFF);
-				try
-				{
-					output.write(code);
-				}
-				catch(IOException ie)
-				{
-					ie.printStackTrace();
-				}
+				output.write(code[i]);
 			}
+			catch(IOException ie)
+			{
+				ie.printStackTrace();
+			}
+			System.out.println((startRangeBlock + i + 1) + "/" + rangeBlockCount + " range blocks encoded.");
 		}
 		System.out.println("Thread " + threadID + " done!");
 	}

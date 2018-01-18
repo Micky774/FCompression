@@ -20,7 +20,6 @@ public class IFSDecoder {
 	private int iterativeMax = 100;
 	private int tag = 0;
 	private int WRcount;
-	private int HRcount;
 	private static Random rand = new Random();
 	private CMap[] functionList;
 	Timer timer = null;
@@ -97,7 +96,6 @@ public class IFSDecoder {
 			canvas[0] = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 			canvas[1] = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 			WRcount = WIDTH / rangeBlockSize;
-			HRcount = HEIGHT / rangeBlockSize;
 			functionList = new CMap[rangeBlockCount];
 			byte[] mapBuffer = new byte[5];
 
@@ -124,7 +122,7 @@ public class IFSDecoder {
 	}
 
 	public static void main(String[] args) {
-		new IFSDecoder("TestCodeBook", 640, 896, 128);
+		new IFSDecoder("TestCodeBook1", 640, 896, 128);
 	}
 
 }
