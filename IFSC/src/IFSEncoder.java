@@ -320,10 +320,14 @@ public class IFSEncoder {
 			}
 		}
 		// s(1-4) compute contrast. DR
-		double s1 = (((double) (n * ab - a * b)) / (n * a2 - a * a));
-		double s2 = Math.min(s1, 1.0);
-		double s3 = Math.max(s2, 0);
-		double s4 = Math.round(s3 * 31);
+
+		// double s1 = (((double) (n * ab - a * b)) / (n * a2 - a * a));
+		// double s2 = Math.min(s1, 1.0);
+		// double s3 = Math.max(s2, 0);
+		// double s4 = Math.round(s3 * 31);
+
+		double s4 = Math
+				.round(Math.max(Math.max(Math.min((((double) (n * ab - a * b)) / (n * a2 - a * a)), 1.0), 0), 0) * 31);
 		s = s4 / 31;
 		g = Math.min(Math.max((int) (((double) b - s * a) / (n)), 0) >> 1, 255);
 		ms = ((double) b2 + s * (s * a2 - 2 * ab + 2 * g * a) + g * (n * g - 2 * b)) / (n);
