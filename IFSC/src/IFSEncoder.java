@@ -10,13 +10,12 @@ import javax.imageio.ImageIO;
 
 public class IFSEncoder {
 
-	public static void EncodeWithThreads(String inputFile, String outputFile, int size) throws IOException {
+	public static void Encode(String inputFile, String outputFile, int size) throws IOException {
 		File imageFile = new File(inputFile);
 		BufferedImage before = ImageIO.read(imageFile);
 		BufferedImage image;
 		int w = before.getWidth();
 		int h = before.getHeight();
-		final int MAX_THREAD = 10;
 
 		if ((w % size == 0) && (h % size == 0)) {
 			image = before;
@@ -36,24 +35,113 @@ public class IFSEncoder {
 		System.out.println(image.getHeight() + ":" + image.getWidth());
 		OutputStream outputStream = new FileOutputStream(outputFile);
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
-		int numThreads = Math.min(MAX_THREAD, rangeBlockCount);
+		double[] temp = new double[7];
+		byte[] code = new byte[5];
+		int t = 1;
+		for (int i = 0; i < image.getHeight() / size; i++) {
+			for (int j = 0; j < image.getWidth() / size; j++) {
+				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
+				int position = (int) temp[6];
+				int config = (int) temp[5];
+				int contrast = (int) temp[2];
+				int brightness = (int) temp[3];
+
+				short p4 = (short) (position & 0xFF);
+				position >>= 8;
+				short p3 = (short) (position & 0xFF);
+				position >>= 8;
+				short p2 = (short) (position & 0xFF);
+				position >>= 1;
+				short p1 = (short) (position & 0x1);
+
+				byte con = (byte) ((config << 5) + contrast);
+				System.out.println(t + "/" + rangeBlockCount + " complete");
+
+				code[0] = con;
+				code[1] = (byte) (brightness & 0xFF);
+				code[1] <<= 1;
+				code[1] += p1;
+				code[2] = (byte) p2;
+				code[3] = (byte) p3;
+				code[4] = (byte) p4;
+				outputStream.write(code);
+				t++;
+
+			}
+		}
+		outputStream.close();
+	}
+	
+	/**
+	 * Encodes an image with multiple threads.
+	 * NO THRESHOLD SUPPORT - For each range block, checks every domain block before choosing best match
+	 * 
+	 * @param inputFile - file-name of the image to be encoded
+	 * @param outputFile - file-name of the file to which the encoded data should be output
+	 * @param size - height/width of a range block
+	 * @throws IOException - accounts for possible failure when image file is being read
+	 */
+	public static void EncodeWithThreads(String inputFile, String outputFile, int size) throws IOException 
+	{
+		//allows editor to set arbitrary limit on number of threads.
+		final int MAX_THREAD = 10;
+		
+		//reads and formats image for encoding
+		File imageFile = new File(inputFile);
+		BufferedImage before = ImageIO.read(imageFile);
+		BufferedImage image;
+		int w = before.getWidth();
+		int h = before.getHeight();
+
+		if ((w % size == 0) && (h % size == 0)) {
+			image = before;
+		} else {
+			AffineTransform at = new AffineTransform();
+			double nx = (Math.ceil(((double) w) / size) * size);
+			double ny = (Math.ceil(((double) h) / size) * size);
+			double sx = nx / w;
+			double sy = ny / h;
+			at.scale(sx, sy);
+			image = new BufferedImage((int) nx, (int) ny, BufferedImage.TYPE_INT_ARGB);
+			System.out.println(sx + ":" + sy);
+			AffineTransformOp scaleOp = new AffineTransformOp(at, AffineTransformOp.TYPE_BILINEAR);
+			scaleOp.filter(before, image);
+		}
+
+		//outputs dimensions of reformatted image
+		System.out.println(image.getHeight() + ":" + image.getWidth());
+		
+		//prepares necessary variables and objects for use by threads
+		OutputStream outputStream = new FileOutputStream(outputFile);
+		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
+		
+		//constructs an array of EncodeThreads based on processor specs and MAX_THREAD limit
+		int numThreads = Math.min(Runtime.getRuntime().availableProcessors(), rangeBlockCount);
+		if (MAX_THREAD > 0)
+				numThreads = Math.min(numThreads, MAX_THREAD);
 		EncodeThread[] threadArray = new EncodeThread[numThreads];
+		
+		//populates EncodeThread[] threadArray with EncodeThread objects and starts each EncodeThread
 		for (int i = 0; i < threadArray.length; i++)
 		{
 			threadArray[i] = new EncodeThread(i, size, rangeBlockCount, image, outputStream, threadArray);
 			threadArray[i].start();
 		}
+		
+		//prevents parent thread from terminating until child threads end
 		while (threadArray[numThreads - 1].isAlive())
 		{
 			try
 			{
-				Thread.sleep(10000);
+				Thread.sleep(10);
 			}
 			catch(InterruptedException ie)
 			{
 				ie.printStackTrace();
 			}
 		}
+		
+		//closes OutputStream after encoding data stored in output file
 		outputStream.close();
 	}
 
@@ -119,13 +207,28 @@ public class IFSEncoder {
 		outputStream.close();
 	}
 
-	public static void EncodeWithThreads(String inputFile, String outputFile, int size, double threshold) throws IOException {
+	/**
+	 * Encodes an image with multiple threads.
+	 * THRESHOLD SUPPORT - For each range block, checks domain blocks until near-match is found
+	 * If no near-match found, the closest match is chosen
+	 * 
+	 * @param inputFile - file-name of the image to be encoded
+	 * @param outputFile - file-name of the file to which the encoded data should be output
+	 * @param size - height/width of a range block
+	 * @param threshold - used by SelectBestDomain method to find near-matching domain blocks within some degree of precis
+	 * @throws IOException - accounts for possible failure when image file is being read
+	 */
+	public static void EncodeWithThreads(String inputFile, String outputFile, int size, double threshold) throws IOException 
+	{
+		//allows editor to set arbitrary limit on number of threads
+		final int MAX_THREAD = 10;
+		
+		//reads image file and formats it for encoding
 		File imageFile = new File(inputFile);
 		BufferedImage before = ImageIO.read(imageFile);
 		BufferedImage image;
 		int w = before.getWidth();
 		int h = before.getHeight();
-		final int MAX_THREAD = 10;
 
 		if ((w % size == 0) && (h % size == 0)) {
 			image = before;
@@ -142,16 +245,27 @@ public class IFSEncoder {
 			scaleOp.filter(before, image);
 		}
 
+		//outputs image dimensions
 		System.out.println(image.getHeight() + ":" + image.getWidth());
+		
+		//prepares necessary objects and variables for threads to use
 		OutputStream outputStream = new FileOutputStream(outputFile);
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
-		int numThreads = Math.min(Math.min(MAX_THREAD, Runtime.getRuntime().availableProcessors()), rangeBlockCount);
+		
+		//constructs an array of EncodeThreads based on processor specs and MAX_THREAD limit
+		int numThreads = Math.min(Runtime.getRuntime().availableProcessors(), rangeBlockCount);
+		if (MAX_THREAD > 0)
+				numThreads = Math.min(numThreads, MAX_THREAD);
 		EncodeThread[] threadArray = new EncodeThread[numThreads];
+		
+		//populates EncodeThread[] threadArray with EncodeThread objects and starts each EncodeThread
 		for (int i = 0; i < threadArray.length; i++)
 		{
 			threadArray[i] = new EncodeThread(i, size, rangeBlockCount, threshold, image, outputStream, threadArray);
 			threadArray[i].start();
 		}
+		
+		//prevents parent thread from terminating until child threads end
 		while (threadArray[numThreads - 1].isAlive())
 		{
 			try
@@ -163,6 +277,8 @@ public class IFSEncoder {
 				ie.printStackTrace();
 			}
 		}
+		
+		//closes OutputStream once all encoding data has been stored in output file
 		outputStream.close();
 	}
 	
@@ -344,16 +460,28 @@ public class IFSEncoder {
 	}
 
 	public static void main(String[] args) {
-		final long startTime = System.currentTimeMillis();
+		//encodes the test image to TestCodeBook1 with multithreading
+		final long startTime1 = System.currentTimeMillis();
 		try {
-			IFSEncoder.EncodeWithThreads("TestTownG.png", "TestCodeBook", 8, 125);
+			IFSEncoder.EncodeWithThreads("TestTownG.png", "TestCodeBook1", 8, 125);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		final long endTime = System.currentTimeMillis();
+		final long endTime1 = System.currentTimeMillis();
+		
+		
+		//encodes the test image to TestCodeBook2 without multithreading
+		final long startTime2 = System.currentTimeMillis();
+		try {
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 8, 125);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		final long endTime2 = System.currentTimeMillis();
 
-		System.out.println("Total execution time: " + (endTime - startTime));
-
+		//displays time comparison to aid in optimization of multithreading
+		System.out.println("Total execution time with threads: " + (endTime1 - startTime1));
+		System.out.println("Total execution time without threads: " + (endTime2 - startTime2));
 	}
 
 }
