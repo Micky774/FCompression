@@ -82,6 +82,8 @@ public class IFSEncoder {
 		if ((w % size == 0) && (h % size == 0)) {
 			image = before;
 		} else {
+			// Creates a scaled virtual image and maps the original image to the
+			// new image
 			AffineTransform at = new AffineTransform();
 			double nx = (Math.ceil(((double) w) / size) * size);
 			double ny = (Math.ceil(((double) h) / size) * size);
@@ -95,30 +97,40 @@ public class IFSEncoder {
 		}
 
 		System.out.println(image.getHeight() + ":" + image.getWidth());
+		// Creates stream for outputting save-file
 		OutputStream outputStream = new FileOutputStream(outputFile);
 		int rangeBlockCount = image.getHeight() * image.getWidth() / (size * size);
+		// Temp stores selectBestDomain output
 		double[] temp = new double[7];
+		// Stores final output to be written
 		byte[] code = new byte[5];
+
 		int t = 1;
 		for (int i = 0; i < image.getHeight() / size; i++) {
 			for (int j = 0; j < image.getWidth() / size; j++) {
+
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size, threshold);
+
+				// Creates abstract values. DR
 				int position = (int) temp[6];
 				int config = (int) temp[5];
 				int contrast = (int) temp[2];
 				int brightness = (int) temp[3];
 
+				// Creates byte-code for position. DR
 				short p4 = (short) (position & 0xFF);
 				position >>= 8;
 				short p3 = (short) (position & 0xFF);
 				position >>= 8;
 				short p2 = (short) (position & 0xFF);
-				position >>= 1;
+				position >>= 8;
 				short p1 = (short) (position & 0x1);
 
+				// Stores combined config/contrast byte
 				byte con = (byte) ((config << 5) + contrast);
 				System.out.println(t + "/" + rangeBlockCount + " complete");
 
+				// Loads respective bytes
 				code[0] = con;
 				code[1] = (byte) (brightness & 0xFF);
 				code[1] <<= 1;
@@ -126,6 +138,8 @@ public class IFSEncoder {
 				code[2] = (byte) p2;
 				code[3] = (byte) p3;
 				code[4] = (byte) p4;
+
+				// Writes code array in order to the file
 				outputStream.write(code);
 				t++;
 
@@ -170,7 +184,7 @@ public class IFSEncoder {
 				temp = IFSEncoder.selectBestDomain(image, j * size, i * size, size);
 				int position = (int) temp[5];
 				System.out.println(t + "/" + rangeBlockCount + " complete");
-				code[0] = (byte) ((((int) temp[5]) & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
+				code[0] = (byte) ((position & 0x7) << 5 + ((Math.round(temp[2] * 31)) & 0x1F));
 				code[1] = (byte) ((((int) temp[3]) & 0x7F) << 1 + (position & 0x1));
 				position >>= 1;
 				code[2] = (byte) (position & 0xFF);
@@ -242,7 +256,7 @@ public class IFSEncoder {
 		short[][] D;
 		double[] comparison = new double[] { -1, -1, 0, 0, Double.MAX_VALUE, -1, -1 };
 		double[] temp;
-		int b = 0, b2 = 0;
+		long b = 0, b2 = 0;
 		for (short[] u : R) {
 			for (short v : u) {
 				b += v;
@@ -252,7 +266,7 @@ public class IFSEncoder {
 		long a = 0, a2 = 0;
 		for (int i = 0; i < image.getHeight() + 1 - 2 * size; i++) {
 			for (int j = 0; j < image.getWidth() + 1 - 2 * size; j++) {
-				// System.out.println(j + " , " + i);
+
 				F = CMap.imageToArray(image, j, i, j + 2 * size, i + 2 * size);
 				D = CMap.subsample(F);
 				for (short[] u : D) {
@@ -290,6 +304,11 @@ public class IFSEncoder {
 	}
 
 	public static double[] regression(short[][] F, short[][] R, long a, long a2, long b, long b2) {
+		// ab stores the join constant (a*b)
+		// n is the total number of pixels
+		// g is brightness
+		// s is contrast
+		// ms is mean square
 		long ab = 0;
 		int n = F.length * F[0].length;
 		int g = 0;
@@ -300,12 +319,13 @@ public class IFSEncoder {
 				ab += F[i][j] * R[i][j];
 			}
 		}
-		double s1 = (((double) n * ab - a * b) / (n * a2 - a * a));
+		// s(1-4) compute contrast. DR
+		double s1 = (((double) (n * ab - a * b)) / (n * a2 - a * a));
 		double s2 = Math.min(s1, 1.0);
 		double s3 = Math.max(s2, 0);
 		double s4 = Math.round(s3 * 31);
 		s = s4 / 31;
-		g = Math.min(Math.max((int) (((double) b - s * a) / (n)), 0) / 2, 255);
+		g = Math.min(Math.max((int) (((double) b - s * a) / (n)), 0) >> 1, 255);
 		ms = ((double) b2 + s * (s * a2 - 2 * ab + 2 * g * a) + g * (n * g - 2 * b)) / (n);
 		double[] result = { s4, g, Math.sqrt(ms) };
 		return result;
@@ -314,7 +334,7 @@ public class IFSEncoder {
 	public static void main(String[] args) {
 		final long startTime = System.currentTimeMillis();
 		try {
-			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 20, 40);
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 1, 125);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -132,20 +132,13 @@ public class CMap {
 	 */
 	public static short[][] imageToArray(BufferedImage image, int sx, int sy, int tx, int ty) {
 		short[][] result = new short[ty - sy][tx - sx];
-		// int r = 0, s = 0;
-		// System.out.println("Height: " + image.getHeight() + " and Width: " +
-		// image.getWidth());
 
-		// System.out.println(sx + " : " + sy);
 		for (int i = 0; i < ty - sy; i++) {
 			for (int j = 0; j < tx - sx; j++) {
 				result[i][j] = (short) (image.getRGB(sx + j, sy + i) & 0xFF);
+
 			}
-		} /*
-			 * for (short[] i : result) { for (short j : i) { if (sy != 0) {
-			 * System.out.println((sx + s) + " , " + (sy + r)); } j = (short)
-			 * (image.getRGB(sx + s, sy + r) & 0xFF); s++; } r++; s = 0; }
-			 */
+		}
 		return result;
 
 	}

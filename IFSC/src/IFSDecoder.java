@@ -161,7 +161,7 @@ public class IFSDecoder {
 	}
 
 	public static void main(String[] args) {
-		new IFSDecoder("TestCodeBook3", 600, 800, 8);
+		new IFSDecoder("TestCodeBook2", 600, 800, 1);
 	}
 
 }
