@@ -314,7 +314,7 @@ public class IFSEncoder {
 	public static void main(String[] args) {
 		final long startTime = System.currentTimeMillis();
 		try {
-			IFSEncoder.Encode("TestTownG.png", "TestCodeBook3", 8, 125);
+			IFSEncoder.Encode("TestTownG.png", "TestCodeBook2", 20, 40);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

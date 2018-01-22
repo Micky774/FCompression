@@ -77,14 +77,25 @@ public class IFSDecoder {
 				}
 			}
 		} else if (mode == 1) {
-			for (int i = 0; i < HEIGHT / 2; i++) {
-				for (int j = 0; j < WIDTH / 2; j++) {
-					int g = 255;
-					g = (g << 8) + 255;
-					g = (g << 8) + 255;
-					canvas[0].setRGB(j * 2, i * 2, g);
+			int g = 255;
+			g = (g << 8) + 255;
+			g = (g << 8) + 255;
+			g = (g << 8) + 255;
+			for (int i = 0; i < HEIGHT; i++) {
+				for (int j = 0; j < WIDTH; j++) {
+					canvas[0].setRGB(j, i, g);
+
 				}
 			}
+		} else if (mode == 2) {
+			int g = 0xFF;
+			g <<= 24;
+			for (int i = 0; i < HEIGHT; i++) {
+				for (int j = 0; j < WIDTH; j++) {
+					canvas[0].setRGB(j, i, g);
+				}
+			}
+
 		}
 	}
 
@@ -137,7 +148,7 @@ public class IFSDecoder {
 		WINDOW2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		WINDOW2.setSize(WIDTH, HEIGHT);
 
-		domainInitialize(0);
+		domainInitialize(2);
 		timer = new Timer(0, event -> this.run());
 		WINDOW1.repaint();
 		WINDOW1.setVisible(true);

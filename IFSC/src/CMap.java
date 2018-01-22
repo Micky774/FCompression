@@ -95,17 +95,18 @@ public class CMap {
 		 */
 		short[][] Range = CMap.permute(Domain, config);
 
-		int r = 0, s = 0, rgb = 0;
-
+		int rgb = 0;
+		int temp;
 		for (int i = 0; i < Range.length; i++) {
 			for (int j = 0; j < Range[0].length; j++) {
+				temp = Range[i][j];
 				rgb = 0xFF;
 				rgb <<= 8;
-				rgb += Range[r][s];
+				rgb += temp;
 				rgb <<= 8;
-				rgb += Range[r][s];
+				rgb += temp;
 				rgb <<= 8;
-				rgb += Range[r][s];
+				rgb += temp;
 				range.setRGB(rx + j, ry + i, rgb);
 			}
 		}
@@ -155,7 +156,7 @@ public class CMap {
 		config = temp >> 5;
 		contrast = ((double) (temp & 0x1F)) / 31;
 		temp = (short) (code[1] & 0xFF);
-		brightness = temp >> 1;
+		brightness = (temp >> 1) << 1;
 		position = (temp & 0x1);
 		position <<= 1;
 		position += (short) (code[2] & 0xFF);
