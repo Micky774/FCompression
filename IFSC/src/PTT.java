@@ -94,10 +94,10 @@ public class PTT {
 	 * @param size
 	 *            How many bytes of the integer to be transcribed. 0<=size<=4
 	 * @param LTR
-	 *            Boolean determining transcription order: 1=Left to Right, 0=Right
-	 *            to Left
-	 * @return A byte[] array containing the individual bytes of the given integer
-	 *         in the given order.
+	 *            Boolean determining transcription order: 1=Left to Right,
+	 *            0=Right to Left
+	 * @return A byte[] array containing the individual bytes of the given
+	 *         integer in the given order.
 	 */
 	public static byte[] transcribe(int Int, int size, boolean LTR) {
 		byte[] result = new byte[size];
@@ -160,7 +160,7 @@ public class PTT {
 		// PTT.printBA(PTT.transcribe(17, 1, false));
 
 		// PTT.write("Dice.png", "DiceTest");
-		PTT.saveAsGray("TestTown.jpg", "TestTownG.png");
+		PTT.saveAsGray("Lena.jpg", "Lena.png");
 
 		System.out.println("Success!");
 

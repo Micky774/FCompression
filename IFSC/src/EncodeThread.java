@@ -3,23 +3,45 @@ import java.io.IOException;
 import java.io.OutputStream;
 public class EncodeThread extends Thread
 {
-	private int size, rangeBlockCount;
+	private int threadID, size, rangeBlockCount;
+	double threshold = 0;
 	private BufferedImage image;
 	private OutputStream output;
 	private EncodeThread[] threadArray;
-	public int threadID;
 	
 	/**
 	 * @param threadIDConstruct - the index of the thread in threadArray. Used to determine range block rows being worked on by thread.
 	 * @param sizeConstruct - size of one of the range blocks' width or height in pixels
+	 * @param rangeBlockCountConstruct - number of range blocks in image
 	 * @param imageConstruct - the input image
 	 * @param outputConstruct - the OutputStream used to write the code to the output file
+	 * @param threadArrayConstruct - the array of EncodeThreads being used to encode the image
 	 */
 	public EncodeThread(int threadIDConstruct, int sizeConstruct, int rangeBlockCountConstruct, BufferedImage imageConstruct, OutputStream outputConstruct, EncodeThread[] threadArrayConstruct)
 	{
 		threadID = threadIDConstruct;
 		size = sizeConstruct;
 		rangeBlockCount = rangeBlockCountConstruct;
+		image = imageConstruct;
+		output = outputConstruct;
+		threadArray = threadArrayConstruct;
+	}
+	
+	/**
+	 * @param threadIDConstruct - the index of the thread in threadArray. Used to determine range block rows being worked on by thread.
+	 * @param sizeConstruct - size of one of the range blocks' width or height in pixels
+	 * @param rangeBlockCountConstruct - number of range blocks in image
+	 * @param thresholdConstruct - minimum threshold to declare a domain block a "match" for a range block.
+	 * @param imageConstruct - the input image
+	 * @param outputConstruct - the OutputStream used to write the code to the output file
+	 * @param threadArrayConstruct - the array of EncodeThreads being used to encode the image
+	 */
+	public EncodeThread(int threadIDConstruct, int sizeConstruct, int rangeBlockCountConstruct, double thresholdConstruct, BufferedImage imageConstruct, OutputStream outputConstruct, EncodeThread[] threadArrayConstruct)
+	{
+		threadID = threadIDConstruct;
+		size = sizeConstruct;
+		rangeBlockCount = rangeBlockCountConstruct;
+		threshold = thresholdConstruct;
 		image = imageConstruct;
 		output = outputConstruct;
 		threadArray = threadArrayConstruct;
@@ -37,7 +59,10 @@ public class EncodeThread extends Thread
 		{
 			int rangeBlockRow = (startRangeBlock + i) / (image.getWidth() / size);
 			int rangeBlockColumn = (startRangeBlock + i) % (image.getWidth() / size);
-			temp = IFSEncoder.selectBestDomain(image, rangeBlockColumn * size, rangeBlockRow * size, size);
+			if(threshold > 0)
+				temp = IFSEncoder.selectBestDomain(image, rangeBlockColumn * size, rangeBlockRow * size, size, threshold);
+			else
+				temp = IFSEncoder.selectBestDomain(image, rangeBlockColumn * size, rangeBlockRow * size, size);
 			int position = (int) temp[6];
 			int config = (int) temp[5];
 			int contrast = (int) temp[2];

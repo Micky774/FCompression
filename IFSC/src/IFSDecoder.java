@@ -18,12 +18,12 @@ public class IFSDecoder {
 	private int delay = 0;
 	private int iterativeCount = 0;
 	private int iterativeMax = 100;
-	private int tag = 0;
+	private static int tag = 0;
 	private int WRcount;
 	private static Random rand = new Random();
 	private CMap[] functionList;
 	Timer timer = null;
-	static JFrame WINDOW = new JFrame() {
+	static JFrame WINDOW1 = new JFrame() {
 		/**
 		 * 
 		 */
@@ -31,7 +31,19 @@ public class IFSDecoder {
 
 		@Override
 		public void paint(java.awt.Graphics g) {
-			g.drawImage(canvas[0], 0, 0, null);
+			g.drawImage(canvas[tag], 0, 0, null);
+		}
+
+	};
+	static JFrame WINDOW2 = new JFrame() {
+		/**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+
+		@Override
+		public void paint(java.awt.Graphics g) {
+			g.drawImage(canvas[(tag + 1) % 2], 0, 0, null);
 		}
 
 	};
@@ -51,17 +63,29 @@ public class IFSDecoder {
 		return this.WIDTH;
 	}
 
-	private void domainInitialize() {
-		for (int i = 0; i < HEIGHT; i++) {
-			for (int j = 0; j < WIDTH; j++) {
-				byte k = (byte) (rand.nextDouble() * 255);
-				int g = k;
-				g = (g << 8) + k;
-				g = (g << 8) + k;
-				canvas[0].setRGB(j, i, g);
+	private void domainInitialize(int mode) {
+		if (mode == 0) {
+			for (int i = 0; i < HEIGHT; i++) {
+				for (int j = 0; j < WIDTH; j++) {
+					if (rand.nextDouble() > .95) {
+						byte k = (byte) (rand.nextDouble() * 255);
+						int g = k;
+						g = (g << 8) + k;
+						g = (g << 8) + k;
+						canvas[0].setRGB(j, i, g);
+					}
+				}
+			}
+		} else if (mode == 1) {
+			for (int i = 0; i < HEIGHT / 2; i++) {
+				for (int j = 0; j < WIDTH / 2; j++) {
+					int g = 255;
+					g = (g << 8) + 255;
+					g = (g << 8) + 255;
+					canvas[0].setRGB(j * 2, i * 2, g);
+				}
 			}
 		}
-
 	}
 
 	private void domainMap() {
@@ -71,14 +95,12 @@ public class IFSDecoder {
 		tag = (tag + 1) % 2;
 	}
 
-	private void updateScreen() {
-		domainMap();
-	}
-
 	private void run() {
 		if (iterativeCount < iterativeMax) {
-			updateScreen();
-			WINDOW.repaint();
+			domainMap();
+			WINDOW1.repaint();
+			WINDOW2.repaint();
+
 			iterativeCount++;
 		}
 
@@ -110,19 +132,25 @@ public class IFSDecoder {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		WINDOW.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		WINDOW.setSize(WIDTH, HEIGHT);
-		domainInitialize();
+		WINDOW1.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		WINDOW1.setSize(WIDTH, HEIGHT);
+		WINDOW2.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		WINDOW2.setSize(WIDTH, HEIGHT);
+
+		domainInitialize(0);
 		timer = new Timer(0, event -> this.run());
-		WINDOW.repaint();
-		WINDOW.setVisible(true);
+		WINDOW1.repaint();
+		WINDOW1.setVisible(true);
+		WINDOW2.repaint();
+		WINDOW2.setVisible(true);
+
 		timer.setInitialDelay(delay);
 		timer.setDelay(delay);
 		timer.start();
 	}
 
 	public static void main(String[] args) {
-		new IFSDecoder("TestCodeBook1", 640, 896, 128);
+		new IFSDecoder("TestCodeBook3", 600, 800, 8);
 	}
 
 }
